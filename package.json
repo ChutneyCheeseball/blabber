@@ -1,0 +1,33 @@
+{
+  "name": "blabber",
+  "version": "1.0.0",
+  "description": "A Twitter clone",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc -p tsconfig.json",
+    "start": "node index.js"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.11.0",
+    "@types/node": "^22.5.5",
+    "eslint": "^9.11.0",
+    "globals": "^15.9.0",
+    "ts-standard": "^12.0.2",
+    "typescript-eslint": "^8.6.0",
+    "typescript": "^5.6.2"
+  },
+  "dependencies": {
+    "fastify": "^5.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChutneyCheeseball/blabber.git"
+  },
+  "author": "Dylan du Toit",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ChutneyCheeseball/blabber/issues"
+  },
+  "homepage": "https://github.com/ChutneyCheeseball/blabber#readme"
+}
