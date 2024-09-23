@@ -1,7 +1,8 @@
 import dotenv from 'dotenv'
 import Fastify from 'fastify'
 import { database } from './database'
-import { createUser } from './users'
+import { createUser, loginUser, testUser } from './users'
+import fjwt from 'fastify-jwt'
 
 dotenv.config()
 
@@ -26,6 +27,14 @@ async function main() {
   })
 
   // ---------------------------------------------------------------------------
+  // JSON web token
+  // ---------------------------------------------------------------------------
+
+  fastify.register(fjwt, {
+    secret: process.env.JWT_SECRET!
+  })
+
+  // ---------------------------------------------------------------------------
   // Register Sequelize database plugin
   // ---------------------------------------------------------------------------
 
@@ -37,25 +46,23 @@ async function main() {
   })
 
   // ---------------------------------------------------------------------------
-  // Test create user route
+  // User routes
   // ---------------------------------------------------------------------------
 
-  fastify.post(
-    '/user',
-    {
-      schema: {
-        body: {
-          type: 'object',
-          required: ['email', 'password'],
-          properties: {
-            email: { type: 'string', format: 'email' },
-            password: { type: 'string', minLength: 8 }
-          }
-        }
+  const userRouteSchema = {
+    body: {
+      type: 'object',
+      required: ['email', 'password'],
+      properties: {
+        email: { type: 'string', format: 'email' },
+        password: { type: 'string', minLength: 8 }
       }
-    },
-    createUser
-  )
+    }
+  }
+
+  fastify.post('/user', { schema: userRouteSchema }, createUser)
+  fastify.post('/login', { schema: userRouteSchema }, loginUser)
+  fastify.get('/test', testUser) // Absolutely just for testing
 
   // ---------------------------------------------------------------------------
   // Start the server
