@@ -1,6 +1,7 @@
 import dotenv from 'dotenv'
 import Fastify from 'fastify'
 import { database } from './database'
+import { createUser } from './users'
 
 dotenv.config()
 
@@ -25,15 +26,36 @@ async function main() {
   })
 
   // ---------------------------------------------------------------------------
-  // Register sequelize database
+  // Register Sequelize database plugin
   // ---------------------------------------------------------------------------
 
-  fastify.register(database, {
+  await fastify.register(database, {
     database: process.env.DB_NAME!,
     user: process.env.DB_USER!,
     password: process.env.DB_PASSWORD!,
     host: process.env.DB_HOST!
   })
+
+  // ---------------------------------------------------------------------------
+  // Test create user route
+  // ---------------------------------------------------------------------------
+
+  fastify.post(
+    '/user',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['email', 'password'],
+          properties: {
+            email: { type: 'string', format: 'email' },
+            password: { type: 'string', minLength: 8 }
+          }
+        }
+      }
+    },
+    createUser
+  )
 
   // ---------------------------------------------------------------------------
   // Start the server
