@@ -19,16 +19,30 @@ function db(fastify: FastifyInstance, opts: dbOptions, done: (error?: Error) => 
   const User = sequelize.define('User', {
     username: {
       type: DataTypes.STRING,
-      unique: true
+      unique: true,
+      allowNull: false
     },
     email: {
       type: DataTypes.STRING,
-      unique: true
+      unique: true,
+      allowNull: false
     },
     password: {
-      type: DataTypes.STRING
+      type: DataTypes.STRING,
+      allowNull: false
     }
   })
+
+  const Blab = sequelize.define('Blab', {
+    content: {
+      type: DataTypes.STRING(280),
+      allowNull: false
+    }
+  })
+
+  User.hasMany(Blab)
+  // Blab.belongsTo(User)
+  Blab.belongsTo(User, { foreignKey: 'userId', as: 'blabber' })
 
   // ---------------------------------------------------------------------------
   // Test our database connection - if good: add hooks, decorators, do sync
@@ -41,7 +55,7 @@ function db(fastify: FastifyInstance, opts: dbOptions, done: (error?: Error) => 
     .then(() => {
       console.log('DB connection is good')
       // Make models available to Fastify instance
-      fastify.decorate('database', { users: User })
+      fastify.decorate('database', { users: User, blabs: Blab })
       // Close db on Fastify shutdown
       fastify.addHook('onClose', (_, done) => {
         console.log('DB shutting down...')
