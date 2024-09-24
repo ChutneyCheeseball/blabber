@@ -2,7 +2,7 @@ import dotenv from 'dotenv'
 import Fastify from 'fastify'
 import { database } from './database'
 import { createUser, loginUser, testUser } from './users'
-import { createBlab, getBlabs } from './blabs'
+import { createBlab, getBlabs, getMentionedBlabs } from './blabs'
 import fjwt from 'fastify-jwt'
 
 dotenv.config()
@@ -123,6 +123,17 @@ async function main() {
       }
     },
     getBlabs
+  )
+
+  fastify.get(
+    '/blabs/mentioned',
+    {
+      onRequest: async (request) => {
+        const verified = await request.jwtVerify()
+        request.user = verified
+      }
+    },
+    getMentionedBlabs
   )
 
   // ---------------------------------------------------------------------------
