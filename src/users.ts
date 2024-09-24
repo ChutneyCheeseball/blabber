@@ -2,7 +2,8 @@ import { FastifyRequest, FastifyReply } from 'fastify'
 import bcrypt from 'bcrypt'
 
 interface UserInput {
-  email: string
+  username?: string
+  email?: string
   password: string
 }
 
@@ -28,22 +29,31 @@ export async function createUser(
   }>,
   reply: FastifyReply
 ) {
-  const { email, password } = request.body
+  const { username, email, password } = request.body
   const { users } = request.server.database
   try {
-    // Check if user already exists
-    const existingUser = await users.findOne({ where: { email } })
+    // Query username / email separately for specific reply messages
+    // Check if username already exists
+    const existingUser = await users.findOne({ where: { username } })
     if (existingUser) {
-      reply.code(400).send('Email address is already taken.')
-    } else {
-      // Create new user with hashed password
-      const hash = createHash(password)
-      await users.create({
-        email,
-        password: hash
-      })
-      reply.send('User created.')
+      reply.code(400).send('Username is already taken.')
+      return
     }
+    // Check if email already exists
+    const existingEmail = await users.findOne({ where: { email } })
+    if (existingEmail) {
+      reply.code(400).send('Email address is already taken.')
+      return
+    }
+    // Check if email already exists
+    // Create new user with hashed password
+    const hash = createHash(password)
+    await users.create({
+      username,
+      email,
+      password: hash
+    })
+    reply.send('User created.')
   } catch (error) {
     console.error(error)
     reply.code(400).send('Could not create user.')
@@ -55,10 +65,10 @@ export async function createUser(
 // -----------------------------------------------------------------------------
 
 export async function loginUser(request: FastifyRequest<{ Body: UserInput }>, reply: FastifyReply) {
-  const { email, password } = request.body
+  const { username, email, password } = request.body
   const { users } = request.server.database
   try {
-    const loginUser = await users.findOne({ where: { email } })
+    const loginUser = await users.findOne(username ? { where: { username } } : { where: { email } })
     if (!loginUser) {
       // Providing an explicit "not found" message to simplify my testing.
       // Don't provide this in a production environment.
@@ -70,7 +80,7 @@ export async function loginUser(request: FastifyRequest<{ Body: UserInput }>, re
       const token = await reply.jwtSign({ email })
       reply.send({ token, message: 'Login successful.' })
     } else {
-      reply.code(400).send({ message: 'Invalid email / password combo.' })
+      reply.code(400).send({ message: 'Invalid username / email / password combo.' })
     }
   } catch (error) {
     console.error(error)

@@ -49,19 +49,44 @@ async function main() {
   // User routes
   // ---------------------------------------------------------------------------
 
-  const userRouteSchema = {
+  // Error messages for these are trash. Do I need Zod?
+
+  const createUserSchema = {
     body: {
       type: 'object',
-      required: ['email', 'password'],
+      required: ['username', 'email', 'password'],
       properties: {
+        username: { type: 'string', minLength: 2 },
         email: { type: 'string', format: 'email' },
         password: { type: 'string', minLength: 8 }
       }
     }
   }
 
-  fastify.post('/user', { schema: userRouteSchema }, createUser)
-  fastify.post('/login', { schema: userRouteSchema }, loginUser)
+  const loginUserSchema = {
+    body: {
+      type: 'object',
+      oneOf: [
+        {
+          required: ['username', 'password'],
+          properties: {
+            username: { type: 'string', minLength: 2 },
+            password: { type: 'string', minLength: 8 }
+          }
+        },
+        {
+          required: ['email', 'password'],
+          properties: {
+            email: { type: 'string', format: 'email' },
+            password: { type: 'string', minLength: 8 }
+          }
+        }
+      ]
+    }
+  }
+
+  fastify.post('/user', { schema: createUserSchema }, createUser)
+  fastify.post('/login', { schema: loginUserSchema }, loginUser)
   fastify.get('/test', testUser) // Absolutely just for testing
 
   // ---------------------------------------------------------------------------
