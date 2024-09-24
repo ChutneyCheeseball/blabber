@@ -2,6 +2,7 @@ import dotenv from 'dotenv'
 import Fastify from 'fastify'
 import { database } from './database'
 import { createUser, loginUser, testUser } from './users'
+import { createBlab, getBlabs } from './blabs'
 import fjwt from 'fastify-jwt'
 
 dotenv.config()
@@ -88,6 +89,41 @@ async function main() {
   fastify.post('/user', { schema: createUserSchema }, createUser)
   fastify.post('/login', { schema: loginUserSchema }, loginUser)
   fastify.get('/test', testUser) // Absolutely just for testing
+
+  fastify.post(
+    '/blabs',
+    {
+      schema: {
+        body: {
+          type: 'object',
+          required: ['content'],
+          properties: {
+            content: {
+              type: 'string',
+              minLength: 1,
+              maxLength: 280
+            }
+          }
+        }
+      },
+      onRequest: async (request) => {
+        const verified = await request.jwtVerify()
+        request.user = verified
+      }
+    },
+    createBlab
+  )
+
+  fastify.get(
+    '/blabs',
+    {
+      onRequest: async (request) => {
+        const verified = await request.jwtVerify()
+        request.user = verified
+      }
+    },
+    getBlabs
+  )
 
   // ---------------------------------------------------------------------------
   // Start the server

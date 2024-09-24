@@ -7,6 +7,7 @@ declare module 'fastify' {
     // Needed for decorate()
     database: {
       users: ModelCtor<Model<any, any>>
+      blabs: ModelCtor<Model<any, any>>
     }
   }
 }

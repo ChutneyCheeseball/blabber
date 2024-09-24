@@ -77,14 +77,14 @@ export async function loginUser(request: FastifyRequest<{ Body: UserInput }>, re
     }
     const userData = loginUser.toJSON()
     if (verifyHash(password, userData.password)) {
-      const token = await reply.jwtSign({ email })
+      const token = await reply.jwtSign({ email: userData.email, username: userData.username })
       reply.send({ token, message: 'Login successful.' })
     } else {
       reply.code(400).send({ message: 'Invalid username / email / password combo.' })
     }
   } catch (error) {
     console.error(error)
-    reply.code(400).send({ message: 'An error occurred.' })
+    reply.code(500).send({ message: 'An error occurred.' })
   }
 }
 
@@ -93,8 +93,13 @@ export async function loginUser(request: FastifyRequest<{ Body: UserInput }>, re
 // -----------------------------------------------------------------------------
 
 export async function testUser(request: FastifyRequest, reply: FastifyReply) {
-  const verified = await request.jwtVerify()
-  console.log(verified)
+  try {
+    const verified = await request.jwtVerify()
+    console.log(verified)
+  } catch (error) {
+    console.error(error)
+    reply.code(500).send({ message: 'An error occurred.' })
+  }
   // As a reward for using your token correctly, we show you everything.
   const users = await request.server.database.users.findAll()
   reply.send(users)
