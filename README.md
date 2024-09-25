@@ -142,6 +142,13 @@ Requires JWT in authorization bearer headers.
 
 [
     {
+        "content": "Where are my car keys?",
+        "createdAt": "2024-09-25T14:13:10.000Z",
+        "blabber": {
+            "username": "ChickenMcNugget"
+        }
+    },
+    {
         "content": "Hello @JoeNobody",
         "createdAt": "2024-09-25T12:10:10.000Z",
         "blabber": {
