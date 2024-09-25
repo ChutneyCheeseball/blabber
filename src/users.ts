@@ -65,42 +65,29 @@ export async function createUser(
 // -----------------------------------------------------------------------------
 
 export async function loginUser(request: FastifyRequest<{ Body: UserInput }>, reply: FastifyReply) {
-  const { username, email, password } = request.body
-  const { users } = request.server.database
   try {
+    const { username, email, password } = request.body
+    const { users } = request.server.database
     const loginUser = await users.findOne(username ? { where: { username } } : { where: { email } })
     if (!loginUser) {
       // Providing an explicit "not found" message to simplify my testing.
       // Don't provide this in a production environment.
-      reply.code(404).send({ message: 'User not found.' })
+      reply.code(404).send('User not found.')
       return
     }
     const userData = loginUser.toJSON()
     if (verifyHash(password, userData.password)) {
-      const token = await reply.jwtSign({ email: userData.email, username: userData.username })
-      reply.send({ token, message: 'Login successful.' })
+      const token = await reply.jwtSign({
+        email: userData.email,
+        username: userData.username,
+        id: userData.id
+      })
+      reply.send(token)
     } else {
-      reply.code(400).send({ message: 'Invalid username / email / password combo.' })
+      reply.code(400).send('Invalid credentials.')
     }
   } catch (error) {
     console.error(error)
-    reply.code(500).send({ message: 'An error occurred.' })
+    reply.code(500).send('An error occurred.')
   }
-}
-
-// -----------------------------------------------------------------------------
-// You definitely don't want anything like this EVER, but useful for my testing.
-// -----------------------------------------------------------------------------
-
-export async function testUser(request: FastifyRequest, reply: FastifyReply) {
-  try {
-    const verified = await request.jwtVerify()
-    console.log(verified)
-  } catch (error) {
-    console.error(error)
-    reply.code(500).send({ message: 'An error occurred.' })
-  }
-  // As a reward for using your token correctly, we show you everything.
-  const users = await request.server.database.users.findAll()
-  reply.send(users)
 }

@@ -18,9 +18,12 @@ function db(fastify: FastifyInstance, opts: dbOptions, done: (error?: Error) => 
 
   const User = sequelize.define('User', {
     username: {
-      type: DataTypes.STRING,
+      type: DataTypes.STRING(32),
       unique: true,
-      allowNull: false
+      allowNull: false,
+      validate: {
+        isAlphanumeric: true
+      }
     },
     email: {
       type: DataTypes.STRING,
@@ -41,8 +44,14 @@ function db(fastify: FastifyInstance, opts: dbOptions, done: (error?: Error) => 
   })
 
   User.hasMany(Blab)
-  // Blab.belongsTo(User)
-  Blab.belongsTo(User, { foreignKey: 'userId', as: 'blabber' })
+  Blab.belongsTo(User, { foreignKey: 'UserId', as: 'blabber' })
+
+  const BlabMention = sequelize.define('BlabMention', {})
+
+  Blab.hasMany(BlabMention, { foreignKey: 'BlabId' })
+  BlabMention.belongsTo(Blab, { foreignKey: 'BlabId' })
+  BlabMention.belongsTo(User, { foreignKey: 'UserId' })
+  User.hasMany(BlabMention, { foreignKey: 'UserId' })
 
   // ---------------------------------------------------------------------------
   // Test our database connection - if good: add hooks, decorators, do sync
@@ -55,7 +64,11 @@ function db(fastify: FastifyInstance, opts: dbOptions, done: (error?: Error) => 
     .then(() => {
       console.log('DB connection is good')
       // Make models available to Fastify instance
-      fastify.decorate('database', { users: User, blabs: Blab })
+      fastify.decorate('database', {
+        users: User,
+        blabs: Blab,
+        blabMentions: BlabMention
+      })
       // Close db on Fastify shutdown
       fastify.addHook('onClose', (_, done) => {
         console.log('DB shutting down...')

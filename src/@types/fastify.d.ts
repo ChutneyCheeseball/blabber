@@ -8,6 +8,7 @@ declare module 'fastify' {
     database: {
       users: ModelCtor<Model<any, any>>
       blabs: ModelCtor<Model<any, any>>
+      blabMentions: ModelCtor<Model<any, any>>
     }
   }
 }
