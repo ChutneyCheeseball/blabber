@@ -1,8 +1,8 @@
 import dotenv from 'dotenv'
-import Fastify from 'fastify'
+import Fastify, { FastifyReply, FastifyRequest } from 'fastify'
 import { database } from './database'
-import { createUser, loginUser, testUser } from './users'
-import { createBlab, getBlabs, getMentionedBlabs } from './blabs'
+import { createUser, loginUser } from './users'
+import { createBlab, getAllBlabs, getMentionedBlabs, getTimelineBlabs, VerifiedUser } from './blabs'
 import fjwt from 'fastify-jwt'
 
 dotenv.config()
@@ -50,8 +50,6 @@ async function main() {
   // User routes
   // ---------------------------------------------------------------------------
 
-  // Error messages for these are trash. Do I need Zod?
-
   const createUserSchema = {
     body: {
       type: 'object',
@@ -88,7 +86,37 @@ async function main() {
 
   fastify.post('/user', { schema: createUserSchema }, createUser)
   fastify.post('/login', { schema: loginUserSchema }, loginUser)
-  fastify.get('/test', testUser) // Absolutely just for testing
+
+  // ---------------------------------------------------------------------------
+  // Blab routes (protected)
+  // ---------------------------------------------------------------------------
+
+  const handleJWT = async (
+    request: FastifyRequest<{
+      Body: unknown
+    }>,
+    reply: FastifyReply
+  ) => {
+    try {
+      const verifiedUser = (await request.jwtVerify()) as VerifiedUser
+      // Does this token belong to an actual user in the database?
+      try {
+        const dbUser = await request.server.database.users.findByPk(verifiedUser.id)
+        if (!dbUser) {
+          console.log("Token doesn't belong to a db user")
+          reply.code(400).send('Unknown user')
+        }
+        // Attach to request for handler's convenience
+        request.user = verifiedUser
+      } catch (error) {
+        console.error(error)
+        reply.code(500).send('Database error')
+      }
+    } catch (error) {
+      console.error(error)
+      reply.code(400).send('Authentication error')
+    }
+  }
 
   fastify.post(
     '/blabs',
@@ -106,34 +134,36 @@ async function main() {
           }
         }
       },
-      onRequest: async (request) => {
-        const verified = await request.jwtVerify()
-        request.user = verified
-      }
+      onRequest: handleJWT
     },
     createBlab
   )
 
+  // Get all blabs
   fastify.get(
-    '/blabs',
+    '/feed',
     {
-      onRequest: async (request) => {
-        const verified = await request.jwtVerify()
-        request.user = verified
-      }
+      onRequest: handleJWT
     },
-    getBlabs
+    getAllBlabs
   )
 
+  // Only get blabs in which user is mentioned
   fastify.get(
-    '/blabs/mentioned',
+    '/mentioned',
     {
-      onRequest: async (request) => {
-        const verified = await request.jwtVerify()
-        request.user = verified
-      }
+      onRequest: handleJWT
     },
     getMentionedBlabs
+  )
+
+  // Get user's own blabs and blabs in which they are mentioned
+  fastify.get(
+    '/timeline',
+    {
+      onRequest: handleJWT
+    },
+    getTimelineBlabs
   )
 
   // ---------------------------------------------------------------------------
