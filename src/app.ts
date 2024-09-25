@@ -1,11 +1,18 @@
 import dotenv from 'dotenv'
-import Fastify, { FastifyReply, FastifyRequest } from 'fastify'
+import Fastify from 'fastify'
 import { database } from './database'
 import { createUser, loginUser } from './users'
-import { createBlab, getAllBlabs, getMentionedBlabs, getTimelineBlabs, VerifiedUser } from './blabs'
+import { createBlab, getAllBlabs, getMentionedBlabs, getTimelineBlabs } from './blabs'
 import fjwt from 'fastify-jwt'
+import { handleJWT } from './handleJWT'
+import { createBlabSchema, createUserSchema, loginUserSchema } from './schema'
 
+// Load our environment variables
 dotenv.config()
+
+// =============================================================================
+// Main Application
+// =============================================================================
 
 async function main() {
   const fastify = Fastify()
@@ -50,121 +57,30 @@ async function main() {
   // User routes
   // ---------------------------------------------------------------------------
 
-  const createUserSchema = {
-    body: {
-      type: 'object',
-      required: ['username', 'email', 'password'],
-      properties: {
-        username: { type: 'string', minLength: 2 },
-        email: { type: 'string', format: 'email' },
-        password: { type: 'string', minLength: 8 }
-      }
-    }
-  }
-
-  const loginUserSchema = {
-    body: {
-      type: 'object',
-      oneOf: [
-        {
-          required: ['username', 'password'],
-          properties: {
-            username: { type: 'string', minLength: 2 },
-            password: { type: 'string', minLength: 8 }
-          }
-        },
-        {
-          required: ['email', 'password'],
-          properties: {
-            email: { type: 'string', format: 'email' },
-            password: { type: 'string', minLength: 8 }
-          }
-        }
-      ]
-    }
-  }
-
   fastify.post('/user', { schema: createUserSchema }, createUser)
   fastify.post('/login', { schema: loginUserSchema }, loginUser)
+  // Previously had a test endpoint to list all users but removed it as I
+  // didn't want to implement admin user functionality.
 
   // ---------------------------------------------------------------------------
   // Blab routes (protected)
   // ---------------------------------------------------------------------------
 
-  const handleJWT = async (
-    request: FastifyRequest<{
-      Body: unknown
-    }>,
-    reply: FastifyReply
-  ) => {
-    try {
-      const verifiedUser = (await request.jwtVerify()) as VerifiedUser
-      // Does this token belong to an actual user in the database?
-      try {
-        const dbUser = await request.server.database.users.findByPk(verifiedUser.id)
-        if (!dbUser) {
-          console.log("Token doesn't belong to a db user")
-          reply.code(400).send('Unknown user')
-        }
-        // Attach to request for handler's convenience
-        request.user = verifiedUser
-      } catch (error) {
-        console.error(error)
-        reply.code(500).send('Database error')
-      }
-    } catch (error) {
-      console.error(error)
-      reply.code(400).send('Authentication error')
-    }
-  }
+  // In hindsight, all the blab routes could have been their own plugin
+  // so we don't have to pass the onRequest handler multiple times.
+  // This would also allow convenient prefixing of all the blab routes.
 
-  fastify.post(
-    '/blabs',
-    {
-      schema: {
-        body: {
-          type: 'object',
-          required: ['content'],
-          properties: {
-            content: {
-              type: 'string',
-              minLength: 1,
-              maxLength: 280
-            }
-          }
-        }
-      },
-      onRequest: handleJWT
-    },
-    createBlab
-  )
+  // Create a blab
+  fastify.post('/blabs', { schema: createBlabSchema, onRequest: handleJWT }, createBlab)
 
   // Get all blabs
-  fastify.get(
-    '/feed',
-    {
-      onRequest: handleJWT
-    },
-    getAllBlabs
-  )
+  fastify.get('/feed', { onRequest: handleJWT }, getAllBlabs)
 
   // Only get blabs in which user is mentioned
-  fastify.get(
-    '/mentioned',
-    {
-      onRequest: handleJWT
-    },
-    getMentionedBlabs
-  )
+  fastify.get('/mentioned', { onRequest: handleJWT }, getMentionedBlabs)
 
   // Get user's own blabs and blabs in which they are mentioned
-  fastify.get(
-    '/timeline',
-    {
-      onRequest: handleJWT
-    },
-    getTimelineBlabs
-  )
+  fastify.get('/timeline', { onRequest: handleJWT }, getTimelineBlabs)
 
   // ---------------------------------------------------------------------------
   // Start the server

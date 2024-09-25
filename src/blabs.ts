@@ -11,6 +11,11 @@ export interface VerifiedUser {
   id: number
 }
 
+// -----------------------------------------------------------------------------
+// Create a blab for the current user, allowing tagging/mentioning of
+// other users (if they exist in the database)
+// -----------------------------------------------------------------------------
+
 export async function createBlab(
   request: FastifyRequest<{
     Body: BlabInput
@@ -53,6 +58,10 @@ export async function createBlab(
   }
 }
 
+// -----------------------------------------------------------------------------
+// Get all the blabs
+// -----------------------------------------------------------------------------
+
 export async function getAllBlabs(request: FastifyRequest, reply: FastifyReply) {
   try {
     const blabs = await request.server.database.blabs.findAll({
@@ -72,6 +81,10 @@ export async function getAllBlabs(request: FastifyRequest, reply: FastifyReply) 
     reply.code(500).send('An error occurred getting all blabs')
   }
 }
+
+// -----------------------------------------------------------------------------
+// Get blabs that the current user was mentioned in
+// -----------------------------------------------------------------------------
 
 export async function getMentionedBlabs(request: FastifyRequest, reply: FastifyReply) {
   try {
@@ -99,6 +112,10 @@ export async function getMentionedBlabs(request: FastifyRequest, reply: FastifyR
   }
 }
 
+// -----------------------------------------------------------------------------
+// Get current user's own blabs, as well as blabs they were mentioned in
+// -----------------------------------------------------------------------------
+
 export async function getTimelineBlabs(request: FastifyRequest, reply: FastifyReply) {
   try {
     const user = request.user as VerifiedUser
@@ -116,10 +133,7 @@ export async function getTimelineBlabs(request: FastifyRequest, reply: FastifyRe
         }
       ],
       where: {
-        [Op.or]: [
-          { UserId: user.id }, // User's own blabs
-          { '$BlabMentions.UserId$': user.id } // Mentioned blabs
-        ]
+        [Op.or]: [{ UserId: user.id }, { '$BlabMentions.UserId$': user.id }]
       },
       order: [['createdAt', 'DESC']]
     })

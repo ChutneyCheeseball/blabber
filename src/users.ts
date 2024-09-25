@@ -62,6 +62,7 @@ export async function createUser(
 
 // -----------------------------------------------------------------------------
 // Login existing user and retrieve JWT
+// Users can log in with either their username or email, but not both
 // -----------------------------------------------------------------------------
 
 export async function loginUser(request: FastifyRequest<{ Body: UserInput }>, reply: FastifyReply) {
